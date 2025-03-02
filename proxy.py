@@ -1,40 +1,73 @@
 import socket
+import threading
 
-serverPort = 6040
+# followed the tutorial at: https://brightdata.com/blog/proxy-101/python-proxy-server
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 6040))
-s.listen(5)
-print("Server ready to recieve")
+def handle(client):
+    request = b''
 
-while True: 
-    #Establish the connection 
-    print('Ready to serve...') 
-    connectionSocket, addr = s.accept()
-    print(f"Connection established with {addr}")
-    try: 
-        message =  connectionSocket.recv(1024).decode()
-        print("Recieved request:", message)
-
-        filename = message.split()[1][1:]                  
-        print(f"Client requested file: {filename}")                    
+    while True:
+        try:
+            data = client.recv(1024)
+            request = request + data
+            print(f"{data.decode('utf-8')}")
         
-        with open(filename, "rb") as f:
-            connectionSocket.send("HTTP/1.1 200 OK\r\n".encode())
-            connectionSocket.send("Content type: text/html\r\n\r\n".encode())
+        except:
+            break
 
-            chunk = f.read()
-            while chunk:
-                connectionSocket.send(chunk)
-                chunk = f.read(1024)
+        host, port = getHostPortRequest(request)
 
-    except FileNotFoundError: 
-        error_message = "HTTP/1.1 404 Not Found\r\n\r\nFile Not Found"
-        connectionSocket.send(error_message.encode())
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.sendall(request)
+
+        print("Recieved response:\n")
+        while True:
+            data = s.recv(1024)
+            print(f"{data.decode('utf-8')}")
+
+            if len(data) > 0:
+                client.sendall(data)
+            else:
+                break
+        
+        s.close()
+        client.close()
+
+def getHostPortRequest(request):
+    hostStart = request.find(b'Host: ') + len(b'Host: ')
+    hostEnd = request.find(b'\r\n', hostStart)
+    hostStr = request[hostStart:hostEnd].decode('utf-8')
+
+    webServer = hostStr.find("/")
+    if webServer == -1:
+        webServer = len(hostStr)
     
-    except Exception as e:
-        print("Error:", e)
+    findPort = hostStr.find(":")
+    if findPort == -1 or webServer < findPort:
+        #default port
+        port = 80
+        host = hostStr[:webServer]
+    else:
+        port = int((hostStr[(findPort + 1):]) [:webServer - findPort - 1])
+        host = hostStr[:findPort]
     
-    finally:
-        connectionSocket.close()
-                     
+    return host, port
+
+
+def start_server():
+    port = 6040
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', port))
+    s.listen(5)
+    print(f"Server listening on port {port}...")
+
+    while True:
+        client, addr = s.accept()
+        print(f"Connection established with {addr}")
+        
+        handler = threading.Thread(target = handle, args = (client,))
+        handler.start()
+
+if __name__ == "__main__":
+    start_server()
