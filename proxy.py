@@ -115,12 +115,12 @@ def blockURL():
         userInput = input("Enter CMD (/block | /unblock): ").lower() # get cmd input from user
         if "/block" in userInput:
             blocked.add(userInput[userInput.find("www."):]) # block URL
-            print(f"BLOCKED: {userInput[userInput.find("www."):]}")
+            print(f"BLOCKED: {(userInput[userInput.find("www."):])}")
 
         elif "/unblock" in userInput:
             if (userInput[userInput.find("www."):]) in blocked:
                 blocked.remove(userInput[userInput.find("www."):]) # if already blocked, unblock URL
-                print(f"UNBLOCKED: {userInput[userInput.find("www."):]}")
+                print(f"UNBLOCKED: {(userInput[userInput.find("www."):])}")
             else:
                 print("ERROR: ", (userInput[userInput.find("www."):]), " not in Blocked URLs") # don't unblock, as not blocked before
 
@@ -136,7 +136,8 @@ def start():
     blockURLS.start() # start management console with threads
     
     while True:
-        client = s.accept() # accept incoming connection
+        client, addr = s.accept() # accept incoming connection
+        print(f"Connection established with {addr}")
         thread = threading.Thread(target= handle, args=(client,))
         thread.start() # handle multiple requests
 
