@@ -3,6 +3,7 @@ import threading
 
 # followed the tutorial at: https://brightdata.com/blog/proxy-101/python-proxy-server
 
+Host = '127.0.0.1'
 Port = 8080
 blocked = set() # for blocking URLs
 
@@ -106,6 +107,11 @@ def handleHTTPS(client:socket.socket, host, port):
         print(f"Error handling HTTPS: {e}")
 
 def blockURL():
+    print("\tWelcome to WhiskerProx, a Python proxy server")
+    print("----------------------------------------------------- •<:30~\n")
+    print(f"\tCurrently listening on: {Host}:{Port}\n")
+    print("----------------------------------------------------- •<:30~\n")
+
     while True:
         userInput = input("Enter CMD (/block | /unblock): ").lower() # get cmd input from user
         if userInput == "/block":
@@ -118,7 +124,7 @@ def blockURL():
                 print(f"UNBLOCKED: {unblock}")
             else:
                 print("ERROR: ", (userInput[userInput.find("www."):]), " not in Blocked URLs") # don't unblock, as not blocked before
-                
+
         else:
             print("ERROR: CMD not recognised") # in case user mis-inputs
 
@@ -126,7 +132,9 @@ def start():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('127.0.0.1', Port))
     s.listen(5)
-    print(f"Server listening on port {Port}...")
+
+    blockURLS = threading.Thread(target=blockURL, args=())
+    blockURLS.start()
     
     while True:
         client, addr = s.accept()
