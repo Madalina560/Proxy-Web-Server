@@ -23,7 +23,7 @@ def handle(client:socket.socket):
             print(f"Blocked request to {host}")
             client.close()
             return
-        
+
         if port == 443:
             handleHTTPS(client, host, port) # handles HTTPS requests
         else:
@@ -114,14 +114,14 @@ def blockURL():
 
     while True:
         userInput = input("Enter CMD (/block | /unblock): ").lower() # get cmd input from user
-        if userInput == "/block":
-            block = blocked.add(userInput[userInput.find("www."):]) # block URL
-            print(f"BLOCKED: {block}")
+        if "/block" in userInput:
+            blocked.add(userInput[userInput.find("www."):]) # block URL
+            print(f"BLOCKED: {userInput[userInput.find("www."):]}")
 
-        elif userInput == "/unblock":
+        elif "/unblock" in userInput:
             if (userInput[userInput.find("www."):]) in blocked:
-                unblock = blocked.remove(userInput[userInput.find("www."):]) # if already blocked, unblock URL
-                print(f"UNBLOCKED: {unblock}")
+                blocked.remove(userInput[userInput.find("www."):]) # if already blocked, unblock URL
+                print(f"UNBLOCKED: {userInput[userInput.find("www."):]}")
             else:
                 print("ERROR: ", (userInput[userInput.find("www."):]), " not in Blocked URLs") # don't unblock, as not blocked before
 
@@ -137,8 +137,7 @@ def start():
     blockURLS.start()
     
     while True:
-        client, addr = s.accept()
-        print(f"Connection established with {addr}")
+        client = s.accept()
         thread = threading.Thread(target= handle, args=(client,))
         thread.start()
 
