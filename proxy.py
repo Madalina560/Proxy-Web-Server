@@ -4,7 +4,7 @@ import threading
 # followed the tutorial at: https://brightdata.com/blog/proxy-101/python-proxy-server
 
 Port = 8080
-BLOCKED = set()
+blocked = set() # for blocking URLs
 
 def handle(client:socket.socket):
     try:
@@ -18,15 +18,15 @@ def handle(client:socket.socket):
             client.close()
             return
         
-        if host in BLOCKED:
+        if host in blocked:
             print(f"Blocked request to {host}")
             client.close()
             return
         
         if port == 443:
-            handleHTTPS(client, host, port)
+            handleHTTPS(client, host, port) # handles HTTPS requests
         else:
-            handleHTTP(client, request, host, port)
+            handleHTTP(client, request, host, port) # handles HTTP requests
         
     except Exception as e:
         print(f"Error handling request: {e}")
@@ -104,7 +104,23 @@ def handleHTTPS(client:socket.socket, host, port):
                     pass
     except Exception as e:
         print(f"Error handling HTTPS: {e}")
-        
+
+def blockURL():
+    while True:
+        userInput = input("Enter CMD (/block | /unblock): ").lower() # get cmd input from user
+        if userInput == "/block":
+            block = blocked.add(userInput[userInput.find("www."):]) # block URL
+            print(f"BLOCKED: {block}")
+
+        elif userInput == "/unblock":
+            if (userInput[userInput.find("www."):]) in blocked:
+                unblock = blocked.remove(userInput[userInput.find("www."):]) # if already blocked, unblock URL
+                print(f"UNBLOCKED: {unblock}")
+            else:
+                print("ERROR: ", (userInput[userInput.find("www."):]), " not in Blocked URLs") # don't unblock, as not blocked before
+                
+        else:
+            print("ERROR: CMD not recognised") # in case user mis-inputs
 
 def start():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
