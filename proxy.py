@@ -1,27 +1,25 @@
 import socket
 import threading
 
-# followed the tutorial at: https://brightdata.com/blog/proxy-101/python-proxy-server
-
 Host = '127.0.0.1'
 Port = 8080
 blocked = set() # for blocking URLs
 
 def handle(client:socket.socket):
     try:
-        request = client.recv(1024)
+        request = client.recv(1024) # recieve data 1024 bytes at a time
         if not request:
-            client.close()
+            client.close() # close if no data
             return
         
-        host, port = getAddressInfo(request)
+        host, port = getAddressInfo(request) # extract host + port number
         if not host:
-            client.close()
+            client.close() # close if host isn't present
             return
         
         if host in blocked:
             print(f"Blocked request to {host}")
-            client.close()
+            client.close() # close connection if host is blocked
             return
 
         if port == 443:
@@ -30,87 +28,88 @@ def handle(client:socket.socket):
             handleHTTP(client, request, host, port) # handles HTTP requests
         
     except Exception as e:
-        print(f"Error handling request: {e}")
+        print(f"Error handling request: {e}") # gives back any errors that may occur
     finally:
-        client.close()
+        client.close() # close socket once finished
 
 
 def getAddressInfo(request):
     try:
-        headers = request.decode(errors = "ignore")
-        start = headers.find("Host: ")
+        headers = request.decode(errors = "ignore") # decode incoming request
+        start = headers.find("Host: ") # extract start of request
         if start == -1:
-            return None, None
+            return None, None # return nothing if no start
 
         start += len("Host: ")
-        end = headers.find("\r\n", start)
+        end = headers.find("\r\n", start) # find carriage return
         if end == -1:
-            return None, None
+            return None, None # return nothing if no carriage return
 
-        host = headers[start:end].strip()
+        host = headers[start:end].strip() # combine start of request & carriage return
         if ":" in host:
-            host, port = host.split(":")
-            port = int(port)
+            host, port = host.split(":") # extract port #
+            port = int(port) # cast to int
         else:
             port = 80 # default HTTP port
         return host, port
     except Exception as e:
-        print(f"Error parsing headers: {e}")
+        print(f"Error parsing headers: {e}") # gives back any errors that may occur
         return None, None
 
 def handleHTTP(client:socket.socket, request, host, port):
     try:
-        webSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        webSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # set up socket
         webSocket.connect((host, port))
         webSocket.sendall(request)
 
         while True:
-            response = webSocket.recv(1024)
+            response = webSocket.recv(1024) # recieve data 1024 bytes at a time
             if not response:
-                break
-            client.sendall(response)
+                break # exit if no response
+            client.sendall(response) # send through all data
             #print(f"HTTP Host: {host}") # for testing purposes
     except Exception as e:
-        print(f"Error forwarding HTTP request: {e}")
+        print(f"Error forwarding HTTP request: {e}") # gives back any errors that may occur
     finally:
-        webSocket.close()
+        webSocket.close() # close socket once finished
 
 def handleHTTPS(client:socket.socket, host, port):
     try:
-        client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n") # send handshake
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as webSocket:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as webSocket: # set up socket
             webSocket.connect((host, port))
 
-            client.setblocking(False)
-            webSocket.setblocking(False)
+            client.setblocking(False) # set blocking flag off
+            webSocket.setblocking(False) #set blocking flag off
 
             while True:
                 try:
-                    data = client.recv(1024)
+                    data = client.recv(1024) # recieve data 1024 bytes at a time
                     if not data:
-                        break
-                    webSocket.sendall(data)
+                        break # exit if no data
+                    webSocket.sendall(data) # send all data otherwise
                     #print(f"1. HTTPS Host: {host}") # for testing purposes
                 except BlockingIOError:
-                    pass
+                    pass # skip over
 
                 try:
-                    data = webSocket.recv(1024)
+                    data = webSocket.recv(1024) # recieve data 1024 bytes at a time
                     if not data:
-                        break
-                    client.sendall(data)
+                        break # exit if no data
+                    client.sendall(data) # send all data otherwise
                     #print(f"2. HTTPS Host: {host}") # for testing purposes
                 except BlockingIOError:
-                    pass
+                    pass # skip over
+    
     except Exception as e:
-        print(f"Error handling HTTPS: {e}")
+        print(f"Error handling HTTPS: {e}") # gives back any errors that may occur
 
 def blockURL():
     print("\tWelcome to WhiskerProx, a Python proxy server")
     print("----------------------------------------------------- •<:30~\n")
     print(f"\tCurrently listening on: {Host}:{Port}\n")
-    print("----------------------------------------------------- •<:30~\n")
+    print("----------------------------------------------------- •<:30~\n") # management console
 
     while True:
         userInput = input("Enter CMD (/block | /unblock): ").lower() # get cmd input from user
@@ -129,17 +128,17 @@ def blockURL():
             print("ERROR: CMD not recognised") # in case user mis-inputs
 
 def start():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # set up proxy socket
     s.bind(('127.0.0.1', Port))
     s.listen(5)
 
     blockURLS = threading.Thread(target=blockURL, args=())
-    blockURLS.start()
+    blockURLS.start() # start management console with threads
     
     while True:
-        client = s.accept()
+        client = s.accept() # accept incoming connection
         thread = threading.Thread(target= handle, args=(client,))
-        thread.start()
+        thread.start() # handle multiple requests
 
 if __name__ == "__main__":
     start()
